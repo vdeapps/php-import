@@ -1,0 +1,57 @@
+{
+    "name": "vdeapps/php-import",
+    "type": "library",
+    "description": "Import data to database",
+    "keywords": [
+        "vdeapps",
+        "library",
+        "database",
+        "import",
+        "doctrine",
+        "dbal"
+    ],
+    "homepage": "https://github.com/vdeapps/php-import",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "vdeApps",
+            "email": "vdeapps@riseup.net",
+            "homepage": "https://github.com/vdeapps/php-import",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "email": "vdeapps@riseup.net",
+        "issues": "https://github.com/vdeapps/php-import/issues"
+    },
+    "config": {
+        "platform": {
+            "php": "7.0.99"
+        }
+    },
+    "require": {
+        "php": ">=7.0.0",
+        "doctrine/dbal": "^2.5",
+        "vdeapps/phpcore-helper": "^1.0"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "3.*"
+    },
+    "suggest": {
+    },
+    "autoload": {
+        "psr-4": {
+            "vdeApps\\Import\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "": "tests/"
+        }
+    },
+    "scripts": {
+        "phpcs" : "php vendor/squizlabs/php_codesniffer/bin/phpcs",
+        "phpcbf" : "php vendor/squizlabs/php_codesniffer/bin/phpcbf",
+        "cs-fix": "php-cs-fixer fix . --fixers=-psr0"
+    }
+}
