@@ -50,6 +50,7 @@
         }
     },
     "scripts": {
+        "test" : "phpunit70",
         "phpcs" : "php vendor/squizlabs/php_codesniffer/bin/phpcs",
         "phpcbf" : "php vendor/squizlabs/php_codesniffer/bin/phpcbf",
         "cs-fix": "php-cs-fixer fix . --fixers=-psr0"

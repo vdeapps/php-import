@@ -7,7 +7,7 @@ namespace vdeApps\Import;
 
 use Doctrine\DBAL\Connection;
 
-class ImportAbstractCsv extends ImportAbstract
+class ImportCsv extends ImportAbstract
 {
     
     /**
