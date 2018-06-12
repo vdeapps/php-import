@@ -6,6 +6,7 @@
 namespace vdeApps\Import;
 
 use Doctrine\DBAL\Connection;
+use vdeApps\phpCore\Helper;
 
 class ImportCsv extends ImportAbstract
 {
@@ -70,13 +71,10 @@ class ImportCsv extends ImportAbstract
         $nbTab = 0;
         while (false !== ($row = fgetcsv($resource, 0, $this->getDelimiter(), $this->getEnclosedBy()))) {
             $this->addRow($row);
-            
             $nbTab++;
-            
-            //            if ($nbTab == 15) {
-            //                break;
-            //            }
         }
+    
+        
         
         /** @var ImportInterfaceAbstract $this */
         return $this;
