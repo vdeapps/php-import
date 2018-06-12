@@ -4,6 +4,7 @@
  */
 
 namespace vdeApps\Import;
+use Doctrine\DBAL\Connection;
 
 /**
  * Interface InterfaceImport
@@ -26,7 +27,7 @@ interface ImportInterface
      * Object Base de données
      * InterfaceImport constructor.
      *
-     * @param \Doctrine\DBAL\Connection $db
+     * @param Connection $db
      */
     public function __construct($db);
     

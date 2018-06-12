@@ -6,25 +6,10 @@
 namespace vdeApps\Import;
 
 use Doctrine\DBAL\Connection;
-use vdeApps\phpCore\Helper;
 
 class ImportCsv extends ImportAbstract
 {
     private $enclosedBy = '"';
-    
-    /**
-     * @return string
-     */
-    public function getEnclosedBy() {
-        return $this->enclosedBy;
-    }
-    
-    /**
-     * @param string $enclosedBy
-     */
-    public function setEnclosedBy($enclosedBy) {
-        $this->enclosedBy = $enclosedBy;
-    }
     private $delimiter = ';';
     
     /**
@@ -40,28 +25,8 @@ class ImportCsv extends ImportAbstract
     }
     
     /**
-     * @return string
-     */
-    public function getDelimiter()
-    {
-        return $this->delimiter;
-    }
-    
-    /**
-     * @param string $delimiter
-     *
-     * @return ImportAbstractCsv
-     */
-    public function setDelimiter($delimiter)
-    {
-        $this->delimiter = $delimiter;
-        
-        return $this;
-    }
-    
-    /**
      * Lire des données et les traiter par setFields et setValues
-     * @return ImportInterfaceAbstract
+     * @return ImportCsv|mixed
      * @throws \Exception
      */
     public function read()
@@ -73,10 +38,43 @@ class ImportCsv extends ImportAbstract
             $this->addRow($row);
             $nbTab++;
         }
-    
         
-        
-        /** @var ImportInterfaceAbstract $this */
         return $this;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getDelimiter()
+    {
+        return $this->delimiter;
+    }
+    
+    /**
+     * @param string $delimiter
+     *
+     * @return ImportCsv
+     */
+    public function setDelimiter($delimiter)
+    {
+        $this->delimiter = $delimiter;
+        
+        return $this;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getEnclosedBy()
+    {
+        return $this->enclosedBy;
+    }
+    
+    /**
+     * @param string $enclosedBy
+     */
+    public function setEnclosedBy($enclosedBy)
+    {
+        $this->enclosedBy = $enclosedBy;
     }
 }
