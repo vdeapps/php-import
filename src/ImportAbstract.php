@@ -69,8 +69,7 @@ class ImportAbstract implements ImportInterface
     private $resource = null;
     private $dropTableBeforeImport = false;
     private $dropLinesBeforeImport = true;
-    private $delimiter = ';';
-    private $enclosedBy = '"';
+    
     private $ignoreFirstLine = false;
     /** @var null|array $fields */
     private $fields = null;
@@ -194,46 +193,6 @@ class ImportAbstract implements ImportInterface
     public function setResource($resource)
     {
         $this->resource = $resource;
-    }
-    
-    /**
-     * @return string
-     */
-    public function getDelimiter()
-    {
-        return $this->delimiter;
-    }
-    
-    /**
-     * @param string $delimiter
-     *
-     * @return ImportAbstractCsv
-     */
-    public function setDelimiter($delimiter)
-    {
-        $this->delimiter = $delimiter;
-        
-        return $this;
-    }
-    
-    /**
-     * @return string
-     */
-    public function getEnclosedBy()
-    {
-        return $this->enclosedBy;
-    }
-    
-    /**
-     * @param string $enclose
-     *
-     * @return ImportAbstractCsv
-     */
-    public function setEnclosedBy($enclose = ';')
-    {
-        $this->enclosedBy = $enclose;
-        
-        return $this;
     }
     
     /**
@@ -742,9 +701,7 @@ class ImportAbstract implements ImportInterface
      * Lire des données et les traiter par setFields et setValues
      * @return mixed
      */
-    public function read()
-    {
+    public function read() {
         // TODO: Implement read() method.
-        return $this;
     }
 }

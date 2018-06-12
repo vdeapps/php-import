@@ -9,6 +9,22 @@ use Doctrine\DBAL\Connection;
 
 class ImportCsv extends ImportAbstract
 {
+    private $enclosedBy = '"';
+    
+    /**
+     * @return string
+     */
+    public function getEnclosedBy() {
+        return $this->enclosedBy;
+    }
+    
+    /**
+     * @param string $enclosedBy
+     */
+    public function setEnclosedBy($enclosedBy) {
+        $this->enclosedBy = $enclosedBy;
+    }
+    private $delimiter = ';';
     
     /**
      * ImportCvs constructor.
@@ -20,6 +36,26 @@ class ImportCsv extends ImportAbstract
         parent::__construct($db);
         $this->setDelimiter(';')
              ->setEnclosedBy('"');
+    }
+    
+    /**
+     * @return string
+     */
+    public function getDelimiter()
+    {
+        return $this->delimiter;
+    }
+    
+    /**
+     * @param string $delimiter
+     *
+     * @return ImportAbstractCsv
+     */
+    public function setDelimiter($delimiter)
+    {
+        $this->delimiter = $delimiter;
+        
+        return $this;
     }
     
     /**
