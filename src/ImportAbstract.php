@@ -102,7 +102,7 @@ class ImportAbstract implements ImportInterface
     /**
      * @param null $db
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setDb($db)
     {
@@ -131,7 +131,7 @@ class ImportAbstract implements ImportInterface
      *
      * @param array|integer $mixed : Tableau ou nb de colonnes à ajouter
      *
-     * @return ImportAbstract
+     * @return $this
      * @throws \Exception
      */
     public function addFields($mixed)
@@ -171,7 +171,7 @@ class ImportAbstract implements ImportInterface
      *
      * @param null|resource $resource
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setResource($resource)
     {
@@ -197,7 +197,7 @@ class ImportAbstract implements ImportInterface
      *
      * @param int $limit (optional) default=0 pas de limite
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setLimit($limit = 0)
     {
@@ -446,7 +446,7 @@ class ImportAbstract implements ImportInterface
      *
      * @param bool $ignoreFirstLine (optional) default=false
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setIgnoreFirstLine($ignoreFirstLine = false)
     {
@@ -466,7 +466,7 @@ class ImportAbstract implements ImportInterface
 /**
      * @param bool $headerLikeFirstLine (optional) default=false
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setHeaderLikeFirstLine($headerLikeFirstLine = false)
     {
@@ -547,7 +547,7 @@ class ImportAbstract implements ImportInterface
     /**
      * @param string $charset
      *
-     * @return ImportAbstract
+     * @return $this
      */
     public function setCharset($charset)
     {
@@ -678,7 +678,7 @@ class ImportAbstract implements ImportInterface
     /**
      * @param string $strTable
      *
-     * @return ImportAbstract
+     * @return $this
      * @throws \Exception
      */
     public function setTable($strTable)
