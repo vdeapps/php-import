@@ -1,5 +1,7 @@
 <?php
 
+namespace Tests\vdeApps\Import;
+
 use PHPUnit\Framework\TestCase;
 use vdeApps\Import\ImportCsv;
 
