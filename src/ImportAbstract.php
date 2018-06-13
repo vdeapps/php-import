@@ -170,10 +170,14 @@ class ImportAbstract implements ImportInterface
      * Resource contenant les données
      *
      * @param null|resource $resource
+     *
+     * @return ImportAbstract
      */
     public function setResource($resource)
     {
         $this->resource = $resource;
+        
+        return $this;
     }
     
     /*
@@ -542,10 +546,14 @@ class ImportAbstract implements ImportInterface
     
     /**
      * @param string $charset
+     *
+     * @return ImportAbstract
      */
     public function setCharset($charset)
     {
         $this->charset = $charset;
+        
+        return $this;
     }
     
     /**
