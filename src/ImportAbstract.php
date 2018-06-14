@@ -9,22 +9,18 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\SchemaConfig;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
-use vdeApps\phpCore\Helper;
+use Exception;
 
 /**
  * Class AbstractImport
- * @package App\Import
+ * @package vdeApps\Import
  *
- *          Ecrit les données dans une table d'import
+ *          Import de données dans une table
  *
- *          db: objet db
+ *          db: Connection
  *          tablename: nom de la table d'import
  *
  *          headerLikeFirstLine : création des colonnes comme la première ligne du tableau, sinon colonnes par lettres
- *
- *          limit: Nombre de ligne à importer à la fois 0..n
- *
- * @see     http://docs.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/schema-representation.html
  *
  */
 /*
@@ -65,12 +61,11 @@ class ImportAbstract implements ImportInterface
     private $table = null;
     private $headerLikeFirstLine = false;
     private $limit = 0;
+    private $startAt = 0;
     /** @var null|resource */
     private $resource = null;
     private $fromfile = null;
     private $fromdata = null;
-    private $dropTableBeforeImport = false;
-    private $dropLinesBeforeImport = true;
     
     private $ignoreFirstLine = false;
     /** @var null|array $fields */
@@ -132,12 +127,12 @@ class ImportAbstract implements ImportInterface
      * @param array|integer $mixed : Tableau ou nb de colonnes à ajouter
      *
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function addFields($mixed)
     {
         if (!is_numeric($mixed) && !is_array($mixed)) {
-            throw new \Exception(__FUNCTION__ . " doit être un entier ou un tableau", self::IMPORT_BAD_FORMAT);
+            throw new Exception(__FUNCTION__ . " doit être un entier ou un tableau", self::IMPORT_BAD_FORMAT);
             return $this;
         }
         
@@ -180,11 +175,8 @@ class ImportAbstract implements ImportInterface
         return $this;
     }
     
-    /*
-     * Entête des colonnes ['name'=>'colname', 'type'=>'LONGTEXT']
-     */
-    
     /**
+     * Return the number of line to add
      * @return int
      */
     public function getLimit()
@@ -193,7 +185,7 @@ class ImportAbstract implements ImportInterface
     }
     
     /**
-     * Nombre de ligne à traiter à la fois
+     * number of line to add
      *
      * @param int $limit (optional) default=0 pas de limite
      *
@@ -212,19 +204,19 @@ class ImportAbstract implements ImportInterface
      * @param $localFilename
      *
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function fromFile($fromfile)
     {
         if (!file_exists($fromfile)) {
-            throw new \Exception("Fichier d'import non trouvé: $fromfile", self::IMPORT_FILENOTFOUND);
+            throw new Exception("Fichier d'import non trouvé: $fromfile", self::IMPORT_FILENOTFOUND);
         }
         
         $this->fromfile = $fromfile;
         
         $resource = fopen($fromfile, "r");
         if ($resource === false) {
-            throw new \Exception("Erreur de lecture de $fromfile", self::IMPORT_READ_ERROR);
+            throw new Exception("Erreur de lecture de $fromfile", self::IMPORT_READ_ERROR);
         }
         
         $this->setResource($resource);
@@ -255,7 +247,7 @@ class ImportAbstract implements ImportInterface
         fwrite($resource, $data);
         rewind($resource);
         
-//        $resource = fopen('data://text/plain,' . $data, 'r+');
+        //        $resource = fopen('data://text/plain,' . $data, 'r+');
         $this->setResource($resource);
         
         return $this;
@@ -271,10 +263,12 @@ class ImportAbstract implements ImportInterface
      *
      * @param array $values
      *
-     * @return $this
-     * @throws \Exception
+     * @param bool  $ignoreStartAt ignore the startAt, force add values
+     *
+     * @return bool
+     * @throws Exception
      */
-    public function addRow($values = [])
+    public function addRow($values = [], $forced=false)
     {
         /*
          * Test si fields est déjà rempli
@@ -282,14 +276,28 @@ class ImportAbstract implements ImportInterface
          */
         if (!is_null($this->getFields())) {
             if ($this->nbFields < count($values)) {
-                throw new \Exception("Ligne " . $this->currentRow . ": Mauvais nombre de colonnes, attendu: " . $this->nbFields, self::IMPORT_BAD_FORMAT);
+                throw new Exception("Ligne " . $this->currentRow . ": Mauvais nombre de colonnes, attendu: " . $this->nbFields, self::IMPORT_BAD_FORMAT);
+                return false;
             }
         }
         
-        $this->currentRow++;
+        // Add the values
         $this->rows[] = $values;
         
-        return $this;
+        if ($forced){
+            return true;
+        }
+        
+        $this->currentRow++;
+        
+        /*
+         * check the limit
+         */
+        if ($this->getLimit()!=0 and $this->currentRow  + (($this->isheaderLikeFirstLine()===false) ? 1:0)>  $this->getLimit() ){
+            return false;
+        }
+        
+        return true;
     }
     
     /**
@@ -312,13 +320,20 @@ class ImportAbstract implements ImportInterface
         $this->fields = $fields;
         $this->nbFields = count($this->fields);
         
+        /*
+         * make array with backquote from create columns
+         */
+        $this->dbColumns = array_map(function($val){
+            return "`$val`";
+        }, $fields);
+        
         return $this;
     }
     
     /**
      * Effectue l'import des données
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function import()
     {
@@ -327,7 +342,7 @@ class ImportAbstract implements ImportInterface
          * Dispatch des données et vérification
          */
         $this->build();
-    
+        
         $this->createTable();
         
         $this->insertData();
@@ -339,7 +354,7 @@ class ImportAbstract implements ImportInterface
      * Lecture/Vérification des données values
      * Lire des données et les traiter par setFields et setValues
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function build()
     {
@@ -364,7 +379,7 @@ class ImportAbstract implements ImportInterface
             // On prend la première ligne comme nom de colonnes ?
             if ($this->isheaderLikeFirstLine()) {
                 if (is_null($this->rows) || count($this->rows) == 0) {
-                    throw new \Exception("Pas de données à traiter", self::IMPORT_NODATA);
+                    throw new Exception("Pas de données à traiter", self::IMPORT_NODATA);
                 }
                 $firstLine = array_shift($this->rows);
                 $this->setFields($firstLine);
@@ -400,16 +415,6 @@ class ImportAbstract implements ImportInterface
             $this->setFields($tbNewFields);
         }
         
-        // Transformation des noms de colonnes
-        $this->setFields(
-            array_map(function ($val)
-            {
-                $val = str_replace([' ', '/'], ['_', '_'], $val);
-                
-                return Helper::camelCase($val);
-            }, $this->getFields())
-        );
-        
         /*
          * Sinon on garde ceux qui sont définis et on test
          */
@@ -421,15 +426,16 @@ class ImportAbstract implements ImportInterface
         }
         
         if (count($tbError)) {
-            throw new \Exception(implode("\n", $tbError), self::IMPORT_BAD_FORMAT);
+            throw new Exception(implode("\n", $tbError), self::IMPORT_BAD_FORMAT);
         }
         
         /*
-         * Ajout des colonnes dans l'objet TABLE
+         * Create columns
          */
-        for ($i = 0; $i < $this->nbFields; $i++) {
-            $this->table->addColumn($this->fields[$i], $this->defaultType, ["notnull" => false, "collation" => $this->getCharset()]);
+        for ($i=0; $i < count($this->dbColumns); $i++){
+            $this->table->addColumn($this->dbColumns[$i], $this->defaultType, ["notnull" => false, "collation" => $this->getCharset()]);
         }
+        
         return $this;
     }
     
@@ -463,7 +469,7 @@ class ImportAbstract implements ImportInterface
         return $this->headerLikeFirstLine;
     }
     
-/**
+    /**
      * @param bool $headerLikeFirstLine (optional) default=false
      *
      * @return $this
@@ -481,7 +487,7 @@ class ImportAbstract implements ImportInterface
      * @param null|interger $indice (optional) Retourne la ligne d'indice $indice
      *
      * @return array|null
-     * @throws \Exception
+     * @throws Exception
      */
     public function getRows($indice = null)
     {
@@ -493,13 +499,13 @@ class ImportAbstract implements ImportInterface
                 $result = $this->rows[$indice];
             }
         } else {
-            throw new \Exception("Impossible de lire la première ligne", self::IMPORT_NODATA);
+            throw new Exception("Impossible de lire la première ligne", self::IMPORT_NODATA);
         }
         
         return $result;
     }
     
-        /**
+    /**
      * Retourne le code lettre d'après un indice
      * ex: 1->A 2->B 26->Z 27->AA ...
      *
@@ -527,6 +533,23 @@ class ImportAbstract implements ImportInterface
         
         return strtolower($letter);
     } // No limit
+    
+    
+    /**
+     * Start at the line for Add
+     *
+     * @param int $startAt
+     *
+     * @return $this
+     * @throws Exception
+     */
+    public function startAt($startAt=0){
+        if (!is_numeric($startAt) || $startAt < 0){
+            throw new Exception("startAt: bad value", 10);
+        }
+        $this->startAt = $startAt;
+        return $this;
+    }
     
     /**
      * @return null
@@ -559,7 +582,7 @@ class ImportAbstract implements ImportInterface
     /**
      * Creation de la table
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     private function createTable()
     {
@@ -574,8 +597,8 @@ class ImportAbstract implements ImportInterface
             } else {
                 $this->getDb()->getSchemaManager()->createTable($this->table);
             }
-        } catch (\Exception $ex) {
-            throw new \Exception("Erreur de création de table: " . $ex->getMessage(), self::IMPORT_BAD_FORMAT);
+        } catch (Exception $ex) {
+            throw new Exception("Erreur de création de table: " . $ex->getMessage(), self::IMPORT_BAD_FORMAT);
         }
         
         return $this;
@@ -592,7 +615,7 @@ class ImportAbstract implements ImportInterface
     /**
      * Insert des données
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     private function insertData()
     {
@@ -636,10 +659,18 @@ class ImportAbstract implements ImportInterface
                 }
             }
             
+            /*
+             * Rewrite array with blackquote
+             */
+            $valuesToInsert = [];
+            foreach ($values as $key => $value) {
+                $valuesToInsert["`$key`"] = $value;
+            }
+            
             try {
-                $this->db->insert($this->getTable()->getName(), $values);
-            } catch (\Exception $ex) {
-                throw new \Exception("Erreur d'insertion dans la base, merci de vérifier l'affectation des valeurs dans les colonnes", self::IMPORT_BAD_FORMAT);
+                $this->db->insert($this->getTable()->getName(), $valuesToInsert);
+            } catch (Exception $ex) {
+                throw new Exception("Erreur d'insertion dans la base, merci de vérifier l'affectation des valeurs dans les colonnes", self::IMPORT_BAD_FORMAT);
             }
         }
         
@@ -652,13 +683,13 @@ class ImportAbstract implements ImportInterface
      * @param null $indice
      *
      * @return null|array
-     * @throws \Exception
+     * @throws Exception
      */
     public function getPlugins($indice = null)
     {
         if (is_numeric($indice)) {
             if ($indice > count($this->plugins) - 1) {
-                throw new \Exception("Plugins d'indice $indice introuvable", self::IMPORT_NODATA);
+                throw new Exception("Plugins d'indice $indice introuvable", self::IMPORT_NODATA);
             }
             
             return $this->plugins[$indice];
@@ -679,13 +710,13 @@ class ImportAbstract implements ImportInterface
      * @param string $strTable
      *
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function setTable($strTable)
     {
         
         if (!is_string($strTable)) {
-            throw new \Exception("Table de destination non définie", self::IMPORT_UNKNOWN_TABLE);
+            throw new Exception("Table de destination non définie", self::IMPORT_UNKNOWN_TABLE);
         }
         
         $infoTable = explode('.', $strTable);
@@ -711,13 +742,13 @@ class ImportAbstract implements ImportInterface
      * @param callable $fct fct($row)
      *
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function addPlugins(callable $fct)
     {
         
         if (!is_callable($fct)) {
-            throw new \Exception("$fct: Le plugins n'est pas conforme");
+            throw new Exception("$fct: Le plugins n'est pas conforme");
         }
         $this->plugins[] = $fct;
         
@@ -727,10 +758,10 @@ class ImportAbstract implements ImportInterface
     /**
      * Lire des données et les traiter par setFields et setValues
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function read()
     {
-        throw new \Exception("You must implement the read function", 10);
+        throw new Exception("You must implement the read function", 10);
     }
 }
